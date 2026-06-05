@@ -1,0 +1,24 @@
+# Contoh systemd unit untuk menjalankan Gold AI Trading Bot 24/7 di VPS.
+# Cara pakai:
+#   1) Ganti /path/ke/gold_bot ke lokasi folder asli (perintah: pwd).
+#   2) sudo cp goldbot.service.example /etc/systemd/system/goldbot.service
+#   3) sudo systemctl daemon-reload
+#   4) sudo systemctl enable --now goldbot
+#   5) sudo journalctl -u goldbot -f      # pantau log
+
+[Unit]
+Description=Gold AI Trading Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/ke/gold_bot
+ExecStart=/path/ke/gold_bot/venv/bin/python main.py
+Restart=always
+RestartSec=10
+# (opsional) jalankan sebagai user non-root:
+# User=ubuntu
+
+[Install]
+WantedBy=multi-user.target

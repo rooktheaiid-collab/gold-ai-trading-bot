@@ -1,0 +1,355 @@
+{
+  "mode": "LIVE PAPER DEMO (nvidia/nemotron-3-ultra-550b-a55b)",
+  "window_end": "2026-06-04 00:00:00+00:00 UTC",
+  "cycles": 30,
+  "start_balance": 1000.0,
+  "end_balance": 1002.51,
+  "net_pnl": 2.51,
+  "return_pct": 0.25,
+  "total_trades": 3,
+  "wins": 3,
+  "losses": 0,
+  "winrate": 100.0,
+  "fees_paid": 0.6,
+  "cycle_log": [
+    {
+      "ts": "2026-06-02 19:00:00+00:00",
+      "price": 4490.5,
+      "manage": "",
+      "signal": "SHORT",
+      "quality": "A",
+      "confidence": 82,
+      "reasoning": "Multi-timeframe bearish alignment (15m & 1h) with price below all EMAs and pivot. RSI at 38-39 shows room for further downside before oversold. Price rejecting at pivot/EMA20 zone with upper wicks indicating distribution. Target S1 (4443) and 24h low (4465) offer 2.4:1 and 4.5:1 RR respectively.",
+      "entry": 4490.5,
+      "sl": 4501.0,
+      "tp1": 4465.0,
+      "tp2": 4443.0,
+      "action": "OPEN SHORT @ 4490.5 (Q=A, conf=82%)",
+      "equity": 999.9,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-02 20:00:00+00:00",
+      "price": 4490.79,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 999.88,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-02 21:00:00+00:00",
+      "price": 4493.2,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 999.75,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-02 22:00:00+00:00",
+      "price": 4490.42,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 999.9,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-02 23:00:00+00:00",
+      "price": 4487.29,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1000.08,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 00:00:00+00:00",
+      "price": 4477.35,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1000.93,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 01:00:00+00:00",
+      "price": 4488.91,
+      "manage": "CLOSED SL_HIT pnl=None",
+      "signal": "SHORT",
+      "quality": "B+",
+      "confidence": 70,
+      "reasoning": "HTF (1h) menunjukkan tren BEARISH kuat (RSI 42, MACD bearish, BB lower half). 15m sedang pullback ke zona resistensi konfluensi: Pivot Point (4494.67), EMA50 (4494.56), dan BB Mid (4487.9). StochRSI 15m overbought (91) menandakan kelelahan naik. Entry limit di 4493 memanfaatkan retest resistensi den",
+      "entry": 4493.0,
+      "sl": 4500.5,
+      "tp1": 4463.0,
+      "tp2": 4446.0,
+      "action": "OPEN SHORT @ 4488.91 (Q=B+, conf=70%)",
+      "equity": 1000.41,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 02:00:00+00:00",
+      "price": 4478.32,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1001.0,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 03:00:00+00:00",
+      "price": 4484.3,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1000.67,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 04:00:00+00:00",
+      "price": 4486.34,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1000.55,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 05:00:00+00:00",
+      "price": 4472.38,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1001.33,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 06:00:00+00:00",
+      "price": 4459.52,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1001.9,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 07:00:00+00:00",
+      "price": 4465.99,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1001.72,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 08:00:00+00:00",
+      "price": 4456.29,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1001.99,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 09:00:00+00:00",
+      "price": 4446.87,
+      "manage": "CLOSED TP2_HIT pnl=None",
+      "signal": "HOLD",
+      "quality": "SKIP",
+      "confidence": 65,
+      "reasoning": "Price sits at critical confluence: 1H RSI oversold (29.98), 15m BB lower band breached, S1 pivot (4446.27), and 24h low (4443.45). However, multi-timeframe bias is ALIGNED_BEAR with strong bearish structure on both 15m and 1H. Entering SHORT into key support risks mean-reversion bounce; entering LON",
+      "entry": null,
+      "sl": null,
+      "tp1": null,
+      "tp2": null,
+      "action": "NO TRADE (signal=HOLD, Q=SKIP)",
+      "equity": 1002.23,
+      "in_position": false
+    },
+    {
+      "ts": "2026-06-03 10:00:00+00:00",
+      "price": 4445.62,
+      "manage": "",
+      "signal": "HOLD",
+      "quality": "B",
+      "confidence": 70,
+      "reasoning": "Multi-timeframe bearish alignment (15m & 1H) confirms downtrend, but 1H RSI at 29.6 signals oversold condition ripe for corrective bounce. Price sits exactly at 15m S1 pivot (4446.27), BB lower band (4442.28), and 24h low (4441.98) \u2014 a confluence support zone. Entering SHORT here chases extension; p",
+      "entry": null,
+      "sl": null,
+      "tp1": null,
+      "tp2": null,
+      "action": "NO TRADE (signal=HOLD, Q=B)",
+      "equity": 1002.23,
+      "in_position": false
+    },
+    {
+      "ts": "2026-06-03 11:00:00+00:00",
+      "price": 4462.26,
+      "manage": "",
+      "signal": "HOLD",
+      "quality": "SKIP",
+      "confidence": 35,
+      "reasoning": "1H timeframe menunjukkan tren BEARISH KUAT (RSI 40.5, MACD bearish, BB lower half) yang mendominasi bias multi-TF. Namun 15m memberikan sinyal campuran: MACD bullish tapi StochRSI overbought (83.9) dan harga di upper-half BB. Belum ada konfirmasi penolakan di resistance (EMA20 4460 / BB mid 4459) un",
+      "entry": null,
+      "sl": null,
+      "tp1": null,
+      "tp2": null,
+      "action": "NO TRADE (signal=HOLD, Q=SKIP)",
+      "equity": 1002.23,
+      "in_position": false
+    },
+    {
+      "ts": "2026-06-03 12:00:00+00:00",
+      "price": 4465.35,
+      "manage": "",
+      "signal": "HOLD",
+      "quality": "SKIP",
+      "confidence": 35,
+      "reasoning": "1H timeframe shows STRONG BEARISH trend (RSI 42, MACD bearish, BB lower half) which dominates bias. 15m shows overbought StochRSI (95) and upper wicks signaling rejection, but price sits in no-man's land between S1 (4446) and PP (4494) with MACD bullish and price above EMA20. No clean entry at key l",
+      "entry": null,
+      "sl": null,
+      "tp1": null,
+      "tp2": null,
+      "action": "NO TRADE (signal=HOLD, Q=SKIP)",
+      "equity": 1002.23,
+      "in_position": false
+    },
+    {
+      "ts": "2026-06-03 13:00:00+00:00",
+      "price": 4463.3,
+      "manage": "",
+      "signal": "SHORT",
+      "quality": "B",
+      "confidence": 65,
+      "reasoning": "1H timeframe menunjukkan tren BEARISH kuat (RSI 41, MACD bearish, BB lower half) sebagai bias HTF. 15m sedang koreksi naik ke area resistensi EMA20/50 (4461-4468) dengan StochRSI overbought (75) dan upper wick signifikan menolak harga tinggi. Setup 'sell the rally' ke S1 pivot (4446) dan S2 (4415). ",
+      "entry": 4465.0,
+      "sl": 4475.0,
+      "tp1": 4446.0,
+      "tp2": 4415.0,
+      "action": "OPEN SHORT @ 4463.3 (Q=B, conf=65%)",
+      "equity": 1002.13,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 14:00:00+00:00",
+      "price": 4449.13,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1002.96,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 15:00:00+00:00",
+      "price": 4459.79,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1002.66,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 16:00:00+00:00",
+      "price": 4444.98,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.08,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 17:00:00+00:00",
+      "price": 4445.32,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.07,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 18:00:00+00:00",
+      "price": 4442.64,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.14,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 19:00:00+00:00",
+      "price": 4445.17,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.07,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 20:00:00+00:00",
+      "price": 4446.72,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.03,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 21:00:00+00:00",
+      "price": 4437.28,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.29,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 22:00:00+00:00",
+      "price": 4446.41,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1003.04,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-03 23:00:00+00:00",
+      "price": 4451.17,
+      "manage": "",
+      "action": "HOLD (in position)",
+      "equity": 1002.9,
+      "in_position": true
+    },
+    {
+      "ts": "2026-06-04 00:00:00+00:00",
+      "price": 4459.29,
+      "manage": "CLOSED SL_HIT pnl=None",
+      "signal": "HOLD",
+      "quality": "C",
+      "confidence": 65,
+      "reasoning": "Price at 15m BB upper band (4459.7) with StochRSI extremely overbought (K=100, D=98) and three consecutive bullish candles showing upper wicks (7.33 avg) \u2014 clear short-term exhaustion. However, MACD remains bullish on both 15m and 1H, and 1H RSI is neutral (48.7), preventing a high-conviction short.",
+      "entry": null,
+      "sl": null,
+      "tp1": null,
+      "tp2": null,
+      "action": "NO TRADE (signal=HOLD, Q=C)",
+      "equity": 1002.51,
+      "in_position": false
+    }
+  ],
+  "trade_log": [
+    {
+      "side": "SHORT",
+      "entry": 4490.5,
+      "exit": 4490.5,
+      "pnl_final_leg": 0.0,
+      "reason": "SL_HIT",
+      "tp1_done": true,
+      "quality": "A",
+      "opened": "2026-06-04T15:20:00.796500+00:00",
+      "closed": "2026-06-04T15:20:01.000962+00:00"
+    },
+    {
+      "side": "SHORT",
+      "entry": 4488.91,
+      "exit": 4446.0,
+      "pnl_final_leg": 1.2,
+      "reason": "TP2_HIT",
+      "tp1_done": true,
+      "quality": "B+",
+      "opened": "2026-06-04T15:20:14.618973+00:00",
+      "closed": "2026-06-04T15:20:14.876568+00:00"
+    },
+    {
+      "side": "SHORT",
+      "entry": 4463.3,
+      "exit": 4463.3,
+      "pnl_final_leg": 0.0,
+      "reason": "SL_HIT",
+      "tp1_done": true,
+      "quality": "B",
+      "opened": "2026-06-04T15:21:57.146429+00:00",
+      "closed": "2026-06-04T15:21:57.513790+00:00"
+    }
+  ]
+}

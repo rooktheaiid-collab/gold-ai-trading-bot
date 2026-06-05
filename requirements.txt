@@ -1,0 +1,17 @@
+# Gold AI Trading Bot — dependencies
+#
+# PENTING: pandas-ta 0.3.x mengimpor `from numpy import NaN` yang DIHAPUS di
+# numpy 2.0 -> ImportError. Dua opsi yang aman:
+#   (A) pakai numpy<2 dengan pandas-ta 0.3.x  (kombinasi stabil & teruji), atau
+#   (B) pakai pandas-ta>=0.4 yang sudah kompatibel numpy 2.x.
+# Default di bawah memakai opsi (A) agar paling reproducible.
+
+python-binance>=1.0.19
+pandas>=2.0.0,<2.3
+numpy>=1.24,<2.0
+pandas-ta==0.3.14b0
+requests>=2.31.0
+openai>=1.40.0          # untuk semua provider OpenAI-compatible (default)
+anthropic>=0.40.0       # opsional — hanya bila LLM_PROVIDER=anthropic
+python-dotenv>=1.0.0
+colorama>=0.4.6

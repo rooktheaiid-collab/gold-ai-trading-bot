@@ -1,0 +1,29 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+venv/
+
+# Secrets & runtime state — JANGAN di-commit
+.env
+bot_memory/
+*.log
+
+# Build artifacts & dev-only scratch (tidak perlu di repo)
+*.zip
+Gold_AI_Trading_Bot_Documentation.pdf
+architecture.png
+generate_diagram.py
+render_doc.py
+research.py
+simulate.py
+simulate2.py
+simulate3_e2e.py
+AUDIT_todo.md
+todo.md
