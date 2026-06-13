@@ -85,6 +85,31 @@ MIN_QUALITY    = set(q.strip() for q in os.getenv("MIN_QUALITY", "A+,A").split("
 # harga ideal (basis poin). 0 = isi persis (idealis). 2 bps = 0.02%.
 SLIPPAGE_BPS = float(os.getenv("SLIPPAGE_BPS", "2"))
 
+# ── Filter Sesi / Jam Trading (time-of-day) ──────────────────────────────────
+# Gold paling likuid & terarah saat overlap London–New York (12:00–17:00 UTC =
+# 19:00–24:00 WIB); sesi Asia cenderung choppy. Riset + backtest cache LLM
+# menunjukkan membatasi entry ke jam overlap membalik hasil dari rugi → untung.
+# Format: rentang jam UTC [start-end) dipisah koma, mis. "12-17" atau
+# "7-10,12-17". Kosong / "all" = semua jam (filter nonaktif).
+def _parse_hours(spec: str):
+    spec = (spec or "").strip().lower()
+    if not spec or spec in ("all", "*", "24h"):
+        return None  # None = semua jam diizinkan
+    hours = set()
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            a, b = part.split("-", 1)
+            a, b = int(a), int(b)
+            hours |= set(range(a, b)) if a <= b else (set(range(a, 24)) | set(range(0, b)))
+        else:
+            hours.add(int(part))
+    return frozenset(h % 24 for h in hours)
+
+TRADING_HOURS_UTC = _parse_hours(os.getenv("TRADING_HOURS_UTC", "12-17"))
+
 # ── Circuit Breakers (safety net harian) ─────────────────────────────────────
 # Bot berhenti buka posisi baru hari itu kalau salah satu batas tersentuh.
 MAX_TRADES_PER_DAY  = int(os.getenv("MAX_TRADES_PER_DAY", "10"))        # 0 = tak terbatas

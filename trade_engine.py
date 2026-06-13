@@ -44,6 +44,18 @@ def _slip(price: float, side: str, is_entry: bool) -> float:
     return price * (1 + frac) if buy else price * (1 - frac)
 
 
+def _session_ok(at=None) -> bool:
+    """Cek apakah jam UTC saat ini termasuk window trading (config.TRADING_HOURS_UTC).
+    `at` = datetime opsional (untuk backtest); default = sekarang UTC.
+    config.TRADING_HOURS_UTC None = semua jam diizinkan (filter nonaktif)."""
+    hours = getattr(config, "TRADING_HOURS_UTC", None)
+    if not hours:  # None atau set kosong → tanpa filter
+        return True
+    if at is None:
+        at = datetime.now(timezone.utc)
+    return at.hour in hours
+
+
 def _rr_ok(entry: float, sl: float, tp1: float) -> tuple[bool, float]:
     """Cek Risk:Reward (entry→TP1) vs config.MIN_RR. Return (ok, rr)."""
     min_rr = getattr(config, "MIN_RR", 0) or 0
@@ -124,8 +136,9 @@ def load_state():
     return False
 
 
-def paper_open_trade(decision: dict, current_price: float):
-    """Buka posisi paper trading."""
+def paper_open_trade(decision: dict, current_price: float, at=None):
+    """Buka posisi paper trading. `at` = waktu candle (UTC) opsional untuk
+    filter sesi saat backtest; live/realtime biarkan None (pakai jam sekarang)."""
     with _STATE_LOCK:
         if paper_state["position"]:
             logger.info("[PAPER] Sudah ada posisi terbuka, skip.")
@@ -133,6 +146,11 @@ def paper_open_trade(decision: dict, current_price: float):
 
         signal = decision.get("signal")
         if signal not in ("LONG", "SHORT"):
+            return
+
+        # Filter sesi: hanya buka posisi di window jam trading (overlap London-NY)
+        if not _session_ok(at):
+            logger.info(f"[PAPER] Di luar jam trading (TRADING_HOURS_UTC), skip {signal}.")
             return
 
         entry = decision.get("entry_price") or current_price
@@ -378,6 +396,11 @@ def live_open_trade(client: Client, decision: dict, current_price: float):
     # Guard 1: ledger internal sudah punya posisi
     if paper_state["position"]:
         logger.info("[LIVE] Ledger sudah ada posisi terbuka, skip.")
+        return None
+
+    # Guard 1b: filter sesi (hanya buka di window jam trading overlap London-NY)
+    if not _session_ok():
+        logger.info(f"[LIVE] Di luar jam trading (TRADING_HOURS_UTC), skip {signal}.")
         return None
 
     sl  = decision.get("stop_loss")

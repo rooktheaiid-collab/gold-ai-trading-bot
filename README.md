@@ -77,6 +77,7 @@ Semua opsi ada di **`.env.example`**. Yang penting:
 | `MIN_CONFIDENCE` / `MIN_QUALITY` | filter eksekusi sinyal (confidence & kualitas) | 65 / A+,A |
 | `MIN_RR` | tolak Risk:Reward (entry→TP1) di bawah ini (0 = off) | 1.2 |
 | `SLIPPAGE_BPS` | simulasi slippage/spread paper (bps, 0 = ideal) | 2 |
+| `TRADING_HOURS_UTC` | filter sesi: jam entry UTC (overlap London-NY). Format `12-17` atau `7-10,12-17`; kosong/`all` = semua jam | 12-17 |
 | `USE_CLOSED_CANDLES` | analisa candle yang sudah close (anti-repaint) | True |
 | `AUTO_DAILY_EVAL` / `EVAL_TZ_OFFSET_HOURS` | evaluasi harian otomatis & zona waktu | True / 7 (WIB) |
 | `SCAN_INTERVAL_SEC` | jeda scan market (detik) | 60 |
