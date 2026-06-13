@@ -115,8 +115,19 @@ Semua opsi ada di **`.env.example`**. Yang penting:
 ## 📲 Telegram (opsional tapi recommended)
 
 1. Buat bot di **@BotFather** → dapat **token**.
-2. Ambil **Chat ID** kamu di **@userinfobot**.
+2. Ambil **Chat ID** kamu di **@userinfobot** (atau pakai doctor di bawah — auto-detect).
 3. Isi `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` (via `setup.py` atau `.env`).
+
+> **⚠️ Penting:** bot **butuh KEDUANYA** (token **dan** chat id). Kalau `TELEGRAM_CHAT_ID`
+> kosong/salah, bot tetap jalan tapi **tidak bisa balas / kirim notifikasi** — terasa
+> "tidak nyambung". Kamu juga harus **kirim 1 pesan ke bot dulu** (bot tak bisa DM duluan).
+
+**Bot & Telegram tidak nyambung? Jalankan doctor:**
+```bash
+python telegram_check.py
+```
+Otomatis cek: token valid (getMe), webhook nyangkut (pemblokir polling #1), **deteksi chat id
+otomatis** dari pesan terakhir kamu + tawarkan tulis ke `.env`, lalu kirim pesan tes.
 
 Perintah yang tersedia:
 
