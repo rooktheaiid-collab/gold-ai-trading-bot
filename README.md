@@ -30,7 +30,33 @@ dan kemampuan **belajar dari evaluasi performanya sendiri**.
 
 ## 🚀 Instalasi Cepat
 
-### Linux / macOS / VPS
+### ⚡ Install 1 baris (paling cepat — Linux / macOS / VPS)
+```bash
+curl -fsSL https://raw.githubusercontent.com/rooktheaiid-collab/gold-ai-trading-bot/main/bootstrap.sh | bash
+```
+Otomatis: pasang prasyarat (git/python), clone repo ke `~/gold-ai-trading-bot`, bikin venv,
+install dependency, siapkan `.env`, lalu kasih tau langkah terakhir. Setelahnya tinggal:
+```bash
+cd ~/gold-ai-trading-bot && source venv/bin/activate
+python setup.py        # wizard isi API key
+bash run.sh            # jalankan (default PAPER = simulasi)
+```
+> Catatan: one-liner ini ambil `bootstrap.sh` lewat URL `raw.githubusercontent.com`,
+> jadi hanya jalan selama repo **public**. Kalau repo kamu jadikan private, pakai cara
+> clone manual di bawah (atau ganti URL pakai token).
+
+### 🐳 Docker (1 perintah, anti ribet venv)
+```bash
+git clone https://github.com/rooktheaiid-collab/gold-ai-trading-bot.git
+cd gold-ai-trading-bot
+cp .env.example .env && nano .env   # isi API key (atau jalankan: python setup.py)
+docker compose up -d                # build + jalan di background, auto-restart
+docker compose logs -f              # pantau log   |   docker compose down = stop
+```
+State (`bot_memory/`) & `.env` disimpan di host, jadi aman saat container dibuild ulang.
+Telegram pakai long-polling — tidak perlu buka port.
+
+### Manual — Linux / macOS / VPS
 ```bash
 bash install.sh        # buat venv + install deps + siapkan .env
 source venv/bin/activate

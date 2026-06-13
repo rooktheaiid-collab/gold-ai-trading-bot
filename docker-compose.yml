@@ -1,0 +1,24 @@
+# Gold AI Trading Bot — jalan 1 perintah:
+#
+#     cp .env.example .env     # lalu isi API key (atau jalankan: python setup.py)
+#     docker compose up -d     # build + jalan di background, auto-restart
+#     docker compose logs -f   # pantau log
+#     docker compose down      # stop
+#
+# State (bot_memory/) & .env disimpan di host, jadi aman saat container dibuild ulang.
+services:
+  goldbot:
+    build: .
+    image: goldbot:latest
+    container_name: goldbot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./bot_memory:/app/bot_memory   # lessons, evaluations, paper_state — persisten
+    # Telegram pakai long-polling (getUpdates) -> tidak perlu buka port apa pun.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

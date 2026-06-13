@@ -1,0 +1,14 @@
+.git
+__pycache__/
+*.py[oc]
+venv/
+.venv/
+.env
+bot_memory/
+backtest/data/
+*.log
+*.zip
+*.pdf
+*.png
+todo.md
+AUDIT_todo.md
