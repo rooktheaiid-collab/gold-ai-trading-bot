@@ -78,6 +78,8 @@ Semua opsi ada di **`.env.example`**. Yang penting:
 | `MIN_RR` | tolak Risk:Reward (entry→TP1) di bawah ini (0 = off) | 1.2 |
 | `SLIPPAGE_BPS` | simulasi slippage/spread paper (bps, 0 = ideal) | 2 |
 | `TRADING_HOURS_UTC` | filter sesi: jam entry UTC (overlap London-NY). Format `12-17` atau `7-10,12-17`; kosong/`all` = semua jam | 12-17 |
+| `REGIME_FILTER` | tolak entry lawan tren 1h (LONG saat 1h bearish / SHORT saat 1h bullish) | True |
+| `MIN_ADX` | minimal ADX-14 (15m) untuk konfirmasi tren; 0 = off (backtest: over-filter) | 0 |
 | `USE_CLOSED_CANDLES` | analisa candle yang sudah close (anti-repaint) | True |
 | `AUTO_DAILY_EVAL` / `EVAL_TZ_OFFSET_HOURS` | evaluasi harian otomatis & zona waktu | True / 7 (WIB) |
 | `SCAN_INTERVAL_SEC` | jeda scan market (detik) | 60 |

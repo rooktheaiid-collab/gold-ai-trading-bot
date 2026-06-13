@@ -28,7 +28,7 @@ import trade_engine as TE
 from trade_engine import (
     paper_open_trade, paper_check_close, get_paper_stats,
     live_open_trade, paper_force_close,
-    live_manage, live_force_close,
+    live_manage, live_force_close, _regime_ok,
 )
 
 # Optional add-ons (Telegram + self-learning). Bot runs fine without them.
@@ -186,6 +186,13 @@ def run_cycle(client, state: dict) -> dict:
         and decision.get("trade_quality") in min_quality
     )
 
+    # Gate regime: searah tren 1h + ADX cukup (kekuatan tren). Disetel via config.
+    regime_ok, regime_why = _regime_ok(
+        decision.get("signal"),
+        (ta_1h.get("trend") or {}).get("direction"),
+        (ta_15m.get("trend") or {}).get("adx"),
+    )
+
     if is_signal and not manual_closed:
         # Gate 1: dijeda manual via Telegram
         paused = telegram_bot is not None and telegram_bot.control.get("paused")
@@ -193,6 +200,8 @@ def run_cycle(client, state: dict) -> dict:
         blocked, reason = _daily_risk_block()
         if paused:
             logger.info("[SKIP] Trading dijeda (Telegram /pause).")
+        elif not regime_ok:
+            logger.info(f"[SKIP] Regime filter: {regime_why} — skip {decision.get('signal')}.")
         elif blocked:
             logger.warning(f"[CIRCUIT BREAKER] Entry diblok: {reason}")
             if not state.get("cb_notified"):

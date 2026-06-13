@@ -88,6 +88,7 @@ def compute_indicators(df: pd.DataFrame, daily_df: pd.DataFrame | None = None) -
     d.ta.stochrsi(length=14, rsi_length=14, k=3, d=3, append=True)
     d.ta.bbands(length=20, std=2, append=True)
     d.ta.atr(length=14, append=True)
+    d.ta.adx(length=14, append=True)
     d.ta.obv(append=True)
 
     last  = d.iloc[-1]
@@ -149,6 +150,15 @@ def compute_indicators(df: pd.DataFrame, daily_df: pd.DataFrame | None = None) -
     # ── ATR ───────────────────────────────────────────────────────────────────
     atr = _val(d, "ATRr_") or _val(d, "ATR_")
 
+    # ── ADX (kekuatan tren; >25 tren kuat, <20 choppy/range) ──────────────────
+    adx = _val(d, "ADX_")   # ADX_14
+    if adx is not None:
+        if   adx >= 25: adx_signal = "STRONG TREND"
+        elif adx >= 20: adx_signal = "TRENDING"
+        else:           adx_signal = "WEAK/CHOPPY"
+    else:
+        adx_signal = "UNKNOWN"
+
     # ── Pivot Points (basis harian) ───────────────────────────────────────────
     pivots = compute_pivots(daily_df) if daily_df is not None else {}
     if not pivots:
@@ -176,6 +186,8 @@ def compute_indicators(df: pd.DataFrame, daily_df: pd.DataFrame | None = None) -
             "direction": trend,
             "ema20": ema20, "ema50": ema50, "ema200": ema200,
             "price_vs_ema20": round(price - ema20, 4) if ema20 else None,
+            "adx": round(adx, 2) if adx is not None else None,
+            "adx_signal": adx_signal,
         },
         "momentum": {
             "rsi": rsi, "rsi_signal": rsi_signal,

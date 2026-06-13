@@ -199,6 +199,7 @@ Timestamp: {ticker.get('timestamp')}
 📈 TECHNICAL — 15 MINUTE TIMEFRAME:
 Trend    : {technicals_15m['trend']['direction']}
 EMA20    : {technicals_15m['trend']['ema20']} | EMA50: {technicals_15m['trend']['ema50']} | EMA200: {technicals_15m['trend']['ema200']}
+ADX(14)  : {technicals_15m['trend'].get('adx')} → {technicals_15m['trend'].get('adx_signal')} (>=25 tren kuat, <20 choppy/range)
 RSI(14)  : {technicals_15m['momentum']['rsi']} → {technicals_15m['momentum']['rsi_signal']}
 MACD     : Line={technicals_15m['momentum']['macd_line']} Sig={technicals_15m['momentum']['macd_signal']} Hist={technicals_15m['momentum']['macd_hist']} → {technicals_15m['momentum']['macd_cross']}
 StochRSI : K={technicals_15m['momentum']['stochrsi_k']} D={technicals_15m['momentum']['stochrsi_d']}
@@ -211,6 +212,7 @@ Candles  : Bullish={technicals_15m['candles']['last_3_bullish']}/3 | Body={techn
 
 📈 TECHNICAL — 1 HOUR TIMEFRAME:
 Trend    : {technicals_1h['trend']['direction']}
+ADX(14)  : {technicals_1h['trend'].get('adx')} → {technicals_1h['trend'].get('adx_signal')}
 RSI(14)  : {technicals_1h['momentum']['rsi']} → {technicals_1h['momentum']['rsi_signal']}
 MACD     : {technicals_1h['momentum']['macd_cross']}
 BB Pos   : {technicals_1h['volatility']['bb_position']}

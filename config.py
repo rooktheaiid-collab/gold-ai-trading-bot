@@ -110,6 +110,18 @@ def _parse_hours(spec: str):
 
 TRADING_HOURS_UTC = _parse_hours(os.getenv("TRADING_HOURS_UTC", "12-17"))
 
+# ── Filter Regime (tren HTF + kekuatan ADX) ──────────────────────────────────
+# Gold itu aset TRENDING, bukan mean-reverting. Riset: jangan lawan tren HTF &
+# hindari pasar choppy (ADX rendah). 2 gate ini menyaring sinyal lawan-arah &
+# kondisi sideways yang jadi sumber loss utama.
+#  • REGIME_FILTER: tolak LONG saat tren 1h BEARISH / SHORT saat 1h BULLISH.
+#  • MIN_ADX: minimal ADX-14 (15m) untuk konfirmasi ada tren. 0 = nonaktif.
+# CATATAN: pada backtest cache (sampel kecil di window overlap), ADX gate justru
+# over-filter & menurunkan hasil → default 0 (OFF). Regime filter default ON
+# (netral di backtest, guardrail anti lawan-tren, didukung riset).
+REGIME_FILTER = os.getenv("REGIME_FILTER", "True").lower() == "true"
+MIN_ADX = float(os.getenv("MIN_ADX", "0"))
+
 # ── Circuit Breakers (safety net harian) ─────────────────────────────────────
 # Bot berhenti buka posisi baru hari itu kalau salah satu batas tersentuh.
 MAX_TRADES_PER_DAY  = int(os.getenv("MAX_TRADES_PER_DAY", "10"))        # 0 = tak terbatas

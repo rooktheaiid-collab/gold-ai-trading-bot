@@ -56,6 +56,22 @@ def _session_ok(at=None) -> bool:
     return at.hour in hours
 
 
+def _regime_ok(side: str, htf_trend: str | None, adx: float | None) -> tuple[bool, str]:
+    """Gate regime: (1) jangan lawan tren HTF (config.REGIME_FILTER),
+    (2) butuh ADX minimal/tren cukup kuat (config.MIN_ADX). Return (ok, alasan).
+    htf_trend = string arah tren 1h (mis 'BULLISH'/'STRONG BEARISH'); adx = ADX-14 15m."""
+    if getattr(config, "REGIME_FILTER", False) and htf_trend:
+        t = htf_trend.upper()
+        if side == "LONG" and "BEARISH" in t:
+            return False, f"HTF {htf_trend} (lawan tren)"
+        if side == "SHORT" and "BULLISH" in t:
+            return False, f"HTF {htf_trend} (lawan tren)"
+    min_adx = getattr(config, "MIN_ADX", 0) or 0
+    if min_adx and adx is not None and adx < min_adx:
+        return False, f"ADX {adx:.1f} < {min_adx} (choppy)"
+    return True, "ok"
+
+
 def _rr_ok(entry: float, sl: float, tp1: float) -> tuple[bool, float]:
     """Cek Risk:Reward (entry→TP1) vs config.MIN_RR. Return (ok, rr)."""
     min_rr = getattr(config, "MIN_RR", 0) or 0
