@@ -38,15 +38,21 @@ if [ ! -d venv ]; then
   echo "📦 Membuat virtualenv ./venv ..."
   "$PY" -m venv venv
 fi
+# Pakai interpreter venv lewat path absolut (lebih andal daripada bergantung
+# pada `activate` — tahan shell aneh / PATH yang di-override).
+VENV_PY="$PWD/venv/bin/python"
+[ -x "$VENV_PY" ] || VENV_PY="$PWD/venv/Scripts/python.exe"   # fallback Windows/Git-Bash
 # shellcheck disable=SC1091
-source venv/bin/activate
-echo "✅ venv aktif: $(python --version)"
+source venv/bin/activate 2>/dev/null || true
+echo "✅ venv: $("$VENV_PY" --version)"
 
 # ── 3. Dependencies ─────────────────────────────────────────────────────────
-echo "⬆️  Upgrade pip ..."
-python -m pip install --upgrade pip >/dev/null
+echo "⬆️  Upgrade pip + build tools ..."
+# setuptools & wheel WAJIB: sebagian paket (mis. pandas-ta) dibangun dari sdist
+# dan butuh 'setuptools.build_meta'. venv baru tidak selalu menyertakannya.
+"$VENV_PY" -m pip install --upgrade pip setuptools wheel >/dev/null
 echo "📥 Install dependencies (bisa 1-3 menit) ..."
-pip install -r requirements.txt
+"$VENV_PY" -m pip install -r requirements.txt
 echo "✅ Dependencies terpasang."
 
 # ── 4. File .env ──────────────────────────────────────────────────────────────
@@ -59,7 +65,7 @@ fi
 
 # ── 5. Smoke test import ──────────────────────────────────────────────────────
 echo "🔍 Cek import inti ..."
-python -c "import config, data_fetcher, technical_analysis, llm_brain, trade_engine, main; print('   ✅ semua modul inti import OK')"
+"$VENV_PY" -c "import config, data_fetcher, technical_analysis, llm_brain, trade_engine, main; print('   ✅ semua modul inti import OK')"
 
 cat <<'NEXT'
 

@@ -30,20 +30,22 @@ dan kemampuan **belajar dari evaluasi performanya sendiri**.
 
 ## 🚀 Instalasi Cepat
 
-### ⚡ Install 1 baris (paling cepat — Linux / macOS / VPS)
+### ⚡ Install 1 baris — SEKALI JALAN (paling cepat — Linux / macOS / VPS)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/rooktheaiid-collab/gold-ai-trading-bot/main/bootstrap.sh | bash
 ```
-Otomatis: pasang prasyarat (git/python), clone repo ke `~/gold-ai-trading-bot`, bikin venv,
-install dependency, siapkan `.env`, lalu kasih tau langkah terakhir. Setelahnya tinggal:
+Satu perintah, langsung tuntas: pasang prasyarat (git/python) → clone ke `~/gold-ai-trading-bot`
+→ venv + dependency → **wizard isi API key (terpandu)** → **tawarkan langsung jalan** (PAPER/simulasi).
+Tidak perlu mengetik perintah lain. (Prompt dibaca dari terminal, jadi tetap interaktif walau lewat `curl | bash`.)
+
+*Mau otomatis penuh tanpa tanya (VPS/CI)?* Sediakan key lewat environment variable:
 ```bash
-cd ~/gold-ai-trading-bot && source venv/bin/activate
-python setup.py        # wizard isi API key
-bash run.sh            # jalankan (default PAPER = simulasi)
+export GOLDBOT_NONINTERACTIVE=1
+export BINANCE_API_KEY=... BINANCE_API_SECRET=... LLM_API_KEY=...
+curl -fsSL https://raw.githubusercontent.com/rooktheaiid-collab/gold-ai-trading-bot/main/bootstrap.sh | bash
 ```
-> Catatan: one-liner ini ambil `bootstrap.sh` lewat URL `raw.githubusercontent.com`,
-> jadi hanya jalan selama repo **public**. Kalau repo kamu jadikan private, pakai cara
-> clone manual di bawah (atau ganti URL pakai token).
+> Catatan: one-liner ambil `bootstrap.sh` lewat `raw.githubusercontent.com`, jadi hanya jalan
+> selama repo **public**. Kalau repo dijadikan private, pakai cara clone manual di bawah (atau URL + token).
 
 ### 🐳 Docker (1 perintah, anti ribet venv)
 ```bash
@@ -58,10 +60,10 @@ Telegram pakai long-polling — tidak perlu buka port.
 
 ### Manual — Linux / macOS / VPS
 ```bash
-bash install.sh        # buat venv + install deps + siapkan .env
+bash install.sh            # buat venv + install deps + siapkan .env
 source venv/bin/activate
-python setup.py        # wizard konfigurasi (isi API key, dll)
-bash run.sh            # jalankan bot
+python setup.py --guided   # wizard terpandu sekali jalan (isi API key, dll)
+bash run.sh                # jalankan bot
 ```
 
 ### Windows
@@ -80,14 +82,21 @@ cp .env.example .env   # lalu edit isi .env
 python main.py
 ```
 
-> **Python 3.10–3.12 disarankan.** Catatan dependency: `pandas-ta 0.3.x` butuh `numpy < 2`
-> (sudah dikunci di `requirements.txt`). Jangan upgrade numpy ke 2.x tanpa juga upgrade pandas-ta ke ≥0.4.
+> **Python 3.10–3.12 disarankan.** Dependency dipasang dari `requirements.txt` (sudah teruji):
+> `pandas-ta 0.4.x` + `numpy 2.x` + `pandas 2.3.x` + `numba`. `pandas-ta 0.3.x` lama sudah
+> dihapus dari PyPI, jadi jangan pin balik ke sana.
 
 ---
 
 ## ⚙️ Konfigurasi (`.env`)
 
-Cara termudah: **`python setup.py`** (wizard menu, ada tes koneksi Telegram). Atau edit `.env` manual.
+Cara termudah — pilih salah satu:
+- **`python setup.py --guided`** — wizard terpandu sekali jalan (first-run): Binance → LLM → Telegram → trading → simpan.
+- **`python setup.py`** — menu interaktif (ubah satu bagian saja).
+- **`python setup.py --noninteractive`** — isi `.env` dari environment variables, tanpa tanya (VPS/Docker/CI).
+
+> Wizard selalu **mempertahankan** semua konfigurasi lain di `.env` (filter, circuit breaker, self-learning) —
+> hanya field yang kamu ubah yang ditimpa.
 Semua opsi ada di **`.env.example`**. Yang penting:
 
 | Variabel | Arti | Default |

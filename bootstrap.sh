@@ -64,23 +64,45 @@ cd "$TARGET"
 c "⚙️  Menjalankan install.sh ..."
 bash install.sh
 
-# ── 4. Langkah terakhir ─────────────────────────────────────────────────────
+# shellcheck disable=SC1091
+source venv/bin/activate
+
+# ── 4. Konfigurasi + jalankan — SEKALI JALAN ────────────────────────────────
+# Punya terminal? (lewat `curl | bash`, stdin = pipe, jadi pakai /dev/tty)
+HAS_TTY=0
+if [ -t 0 ] || { [ -e /dev/tty ] && (exec </dev/tty) 2>/dev/null; }; then HAS_TTY=1; fi
+
+if [ "${GOLDBOT_NONINTERACTIVE:-0}" = "1" ]; then
+  c "🤖 Mode non-interaktif — isi .env dari environment variables ..."
+  python setup.py --noninteractive
+  HAS_TTY=0
+elif [ "$HAS_TTY" = "1" ]; then
+  c "🧭 Lanjut setup API key (sekali jalan) ..."
+  python setup.py --guided </dev/tty || c "(setup dilewati — bisa diulang: python setup.py --guided)"
+  echo
+  ans=$(printf '  ▶️  Jalankan bot sekarang? (PAPER/simulasi, AMAN) (y/n) > '; head -n1 </dev/tty)
+  if printf '%s' "$ans" | grep -qi '^y'; then
+    ok "🟡 Menjalankan bot ... (Ctrl+C untuk berhenti)"
+    exec bash run.sh </dev/tty
+  fi
+fi
+
+# ── 5. Langkah terakhir (jika belum dijalankan) ─────────────────────────────
 cat <<NEXT
 
 $(ok "════════════════════════════════════════════════════")
-$(ok "  ✅ Bootstrap selesai! Bot terpasang di:")
-     $TARGET
+$(ok "  ✅ Bot terpasang di:  $TARGET")
 
-  Tinggal 2 langkah lagi:
-
+  Lanjutkan kapan saja:
     cd "$TARGET"
     source venv/bin/activate
-    python setup.py          # wizard: isi API key (Binance, LLM, Telegram)
-    bash run.sh              # jalankan (default PAPER = simulasi, AMAN)
+    python setup.py --guided   # isi API key (Binance, LLM, Telegram) — sekali jalan
+    bash run.sh                # jalankan (default PAPER = simulasi, AMAN)
 
-  Mau jalan 24/7 di VPS? Pakai systemd:
-    lihat  goldbot.service.example  di folder repo.
+  Non-interaktif (VPS/otomatis): set env var lalu
+    GOLDBOT_NONINTERACTIVE=1  + BINANCE_API_KEY=... LLM_API_KEY=...  python setup.py -n
 
+  24/7 di VPS: lihat goldbot.service.example  •  Telegram bermasalah: python telegram_check.py
   ⚠️  Default PAPER_TRADING=True. Set False HANYA setelah uji Testnet / size kecil.
 $(ok "════════════════════════════════════════════════════")
 NEXT

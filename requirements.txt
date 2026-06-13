@@ -1,15 +1,19 @@
 # Gold AI Trading Bot — dependencies
 #
-# PENTING: pandas-ta 0.3.x mengimpor `from numpy import NaN` yang DIHAPUS di
-# numpy 2.0 -> ImportError. Dua opsi yang aman:
-#   (A) pakai numpy<2 dengan pandas-ta 0.3.x  (kombinasi stabil & teruji), atau
-#   (B) pakai pandas-ta>=0.4 yang sudah kompatibel numpy 2.x.
-# Default di bawah memakai opsi (A) agar paling reproducible.
+# CATATAN pandas-ta (PENTING — penyebab install gagal di versi lama):
+#   - pandas-ta 0.3.x (mis. 0.3.14b0) sudah DIHAPUS dari PyPI -> pin lama gagal
+#     install ("No matching distribution found"). Yang masih ada = seri 0.4.x.
+#   - Seri 0.4.x butuh numpy>=2.2 + pandas>=2.3 + numba (ditarik otomatis sebagai
+#     dependency). Itu sebabnya numpy TIDAK lagi dipatok <2.
+#   - Nama kolom indikator (EMA_/MACD_/RSI_/BBU_/ATRr_/ADX_/OBV) tetap sama —
+#     SUDAH DIUJI cocok dgn technical_analysis.compute_indicators() + backtest.
+#   - Kode bot sudah bersih dari API numpy-1 yang dihapus di numpy-2 (mis. np.NaN).
+#   - Pakai RANGE (bukan pin keras) supaya tahan kalau satu rilis beta di-yank.
 
 python-binance>=1.0.19
-pandas>=2.0.0,<2.3
-numpy>=1.24,<2.0
-pandas-ta==0.3.14b0
+numpy>=2.2,<3
+pandas>=2.3.2,<3
+pandas-ta>=0.4.67b0
 requests>=2.31.0
 openai>=1.40.0          # untuk semua provider OpenAI-compatible (default)
 anthropic>=0.40.0       # opsional — hanya bila LLM_PROVIDER=anthropic

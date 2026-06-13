@@ -12,7 +12,8 @@ WORKDIR /app
 
 # Layer dependency dulu (cache build lebih cepat saat kode berubah)
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
+# setuptools+wheel WAJIB: pandas-ta dibangun dari sdist (butuh setuptools.build_meta)
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt
 
 # Kode bot

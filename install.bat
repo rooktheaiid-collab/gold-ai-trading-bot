@@ -26,8 +26,9 @@ if not exist venv (
 call venv\Scripts\activate.bat
 echo [OK] venv aktif.
 
-echo [..] Upgrade pip ...
-python -m pip install --upgrade pip >nul
+echo [..] Upgrade pip + build tools ...
+REM setuptools+wheel WAJIB: pandas-ta dibangun dari sdist (butuh setuptools.build_meta)
+python -m pip install --upgrade pip setuptools wheel >nul
 echo [..] Install dependencies (1-3 menit) ...
 pip install -r requirements.txt
 if errorlevel 1 ( echo [ERROR] Install dependency gagal. & pause & exit /b 1 )
@@ -46,8 +47,8 @@ echo ============================================================
 echo   Instalasi selesai!
 echo   Langkah berikutnya:
 echo     1) venv\Scripts\activate.bat
-echo     2) python setup.py        (wizard konfigurasi)
-echo     3) python main.py         (jalankan bot)
+echo     2) python setup.py --guided   (wizard konfigurasi terpandu)
+echo     3) python main.py             (jalankan bot)
 echo   Default PAPER_TRADING=True (simulasi, AMAN).
 echo ============================================================
 pause
