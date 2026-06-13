@@ -177,12 +177,12 @@ def run_cycle(client, state: dict) -> dict:
                 _notify(telegram_notifier.fmt_close(last_ev))
 
     # ── 7. Execute Signal ─────────────────────────────────────────────────────
-    min_confidence = 65
-    min_quality    = {"A+", "A"}
+    min_confidence = getattr(config, "MIN_CONFIDENCE", 65)
+    min_quality    = getattr(config, "MIN_QUALITY", {"A+", "A"})
 
     is_signal = (
         decision.get("signal") in ("LONG", "SHORT")
-        and decision.get("confidence", 0) >= min_confidence
+        and (decision.get("confidence") or 0) >= min_confidence
         and decision.get("trade_quality") in min_quality
     )
 

@@ -22,6 +22,49 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 
+def _to_float(v):
+    """Coerce nilai LLM ke float dengan aman. Return None kalau gagal.
+    Banyak provider (DeepSeek, Llama, Qwen, dll) kadang kirim angka sebagai
+    string ("3401.5") atau dengan simbol ("$3,401.5") → tanpa coerce ini,
+    aritmetika SL/TP melempar TypeError dan trade gagal diam-diam."""
+    if v is None or isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    if isinstance(v, str):
+        s = v.strip().replace("$", "").replace(",", "").replace("%", "")
+        if s == "" or s.lower() in ("null", "none", "n/a", "na"):
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+    return None
+
+
+def _sanitize_decision(d: dict) -> dict:
+    """Bersihkan output LLM: coerce angka ke float + normalisasi urutan TP.
+    - entry/sl/tp1/tp2/RR/confidence → float (atau None).
+    - Untuk LONG pastikan tp1<=tp2; untuk SHORT pastikan tp1>=tp2 (target
+      terdekat = TP1). Mencegah partial-TP1 & geser-SL-ke-BE terlewat saat LLM
+      membalik urutan TP."""
+    for k in ("entry_price", "stop_loss", "take_profit_1", "take_profit_2",
+              "risk_reward", "confidence"):
+        if k in d:
+            d[k] = _to_float(d[k])
+
+    sig = d.get("signal")
+    tp1, tp2 = d.get("take_profit_1"), d.get("take_profit_2")
+    if tp1 is not None and tp2 is not None and sig in ("LONG", "SHORT"):
+        if sig == "LONG" and tp1 > tp2:
+            d["take_profit_1"], d["take_profit_2"] = tp2, tp1
+            logger.info("[SANITIZE] TP LONG terbalik → ditukar (TP1<=TP2).")
+        elif sig == "SHORT" and tp1 < tp2:
+            d["take_profit_1"], d["take_profit_2"] = tp2, tp1
+            logger.info("[SANITIZE] TP SHORT terbalik → ditukar (TP1>=TP2).")
+    return d
+
+
 # ── Inisialisasi client sesuai provider ──────────────────────────────────────
 def _build_client():
     """Bangun client LLM sesuai LLM_PROVIDER. Return (provider, client)."""
@@ -203,6 +246,7 @@ Berikan analisa dan keputusan trading dalam format JSON yang sudah ditentukan.
         elif "```" in raw:
             raw = raw.split("```")[1].split("```")[0].strip()
         decision = json.loads(raw)
+        decision = _sanitize_decision(decision)   # coerce angka + normalisasi urutan TP
         logger.info(f"LLM Decision: {decision.get('signal')} | Confidence: {decision.get('confidence')}% | Quality: {decision.get('trade_quality')}")
         return decision
     except Exception as e:

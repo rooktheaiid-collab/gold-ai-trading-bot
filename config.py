@@ -71,6 +71,20 @@ MAX_OPEN_TRADES    = 1           # Maksimum posisi terbuka bersamaan
 # Tolak setup dengan SL kejauhan (risiko/trade membengkak). 0 = nonaktif.
 MAX_SL_DISTANCE_PCT = float(os.getenv("MAX_SL_DISTANCE_PCT", "0.02"))   # 2% dari entry
 
+# Risk:Reward minimum (diukur entry→TP1). Tolak setup di bawah ini. 0 = nonaktif.
+MIN_RR = float(os.getenv("MIN_RR", "1.2"))
+
+# ── Filter Sinyal (gating eksekusi) ──────────────────────────────────────────
+# Hanya eksekusi sinyal dengan confidence & kualitas minimum. Dipindah dari
+# hardcode di main.py agar bisa diatur lewat .env & konsisten dengan param lain.
+MIN_CONFIDENCE = float(os.getenv("MIN_CONFIDENCE", "65"))               # 0-100
+MIN_QUALITY    = set(q.strip() for q in os.getenv("MIN_QUALITY", "A+,A").split(",") if q.strip())
+
+# ── Slippage / spread model (paper) ──────────────────────────────────────────
+# Simulasi biaya eksekusi nyata: entry & exit diisi sedikit lebih buruk dari
+# harga ideal (basis poin). 0 = isi persis (idealis). 2 bps = 0.02%.
+SLIPPAGE_BPS = float(os.getenv("SLIPPAGE_BPS", "2"))
+
 # ── Circuit Breakers (safety net harian) ─────────────────────────────────────
 # Bot berhenti buka posisi baru hari itu kalau salah satu batas tersentuh.
 MAX_TRADES_PER_DAY  = int(os.getenv("MAX_TRADES_PER_DAY", "10"))        # 0 = tak terbatas

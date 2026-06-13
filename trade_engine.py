@@ -13,6 +13,7 @@ Perbaikan hasil audit:
 """
 
 import os
+import copy
 import json
 import logging
 import threading
@@ -27,6 +28,32 @@ logger = logging.getLogger(__name__)
 # Taker fee Binance Futures ~0.04% per sisi (entry+exit ~0.08% notional).
 TAKER_FEE = 0.0004
 TP1_CLOSE_FRACTION = 0.5   # porsi posisi yang ditutup di TP1
+
+
+def _slip(price: float, side: str, is_entry: bool) -> float:
+    """Terapkan slippage/spread (config.SLIPPAGE_BPS) ke harga fill paper.
+    Eksekusi selalu sedikit lebih BURUK dari harga ideal:
+      • Entry LONG / exit SHORT (beli)  → bayar lebih mahal.
+      • Entry SHORT / exit LONG (jual)  → terima lebih murah.
+    """
+    bps = getattr(config, "SLIPPAGE_BPS", 0) or 0
+    if not bps or not price:
+        return price
+    frac = bps / 10000.0
+    buy = (side == "LONG") if is_entry else (side == "SHORT")
+    return price * (1 + frac) if buy else price * (1 - frac)
+
+
+def _rr_ok(entry: float, sl: float, tp1: float) -> tuple[bool, float]:
+    """Cek Risk:Reward (entry→TP1) vs config.MIN_RR. Return (ok, rr)."""
+    min_rr = getattr(config, "MIN_RR", 0) or 0
+    risk = abs(entry - sl)
+    if risk <= 0:
+        return False, 0.0
+    rr = abs(tp1 - entry) / risk
+    if min_rr and rr < min_rr:
+        return False, rr
+    return True, rr
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -74,6 +101,13 @@ def save_state():
         logger.warning(f"[STATE] Gagal simpan state: {e}")
 
 
+def snapshot_state() -> dict:
+    """Salinan dalam (deep copy) paper_state di bawah lock — aman dibaca dari
+    thread lain (mis. Telegram) tanpa risiko terbaca saat sedang dimutasi."""
+    with _STATE_LOCK:
+        return copy.deepcopy(paper_state)
+
+
 def load_state():
     """Muat paper_state dari disk jika ada. Dipanggil sekali saat startup."""
     try:
@@ -92,53 +126,65 @@ def load_state():
 
 def paper_open_trade(decision: dict, current_price: float):
     """Buka posisi paper trading."""
-    if paper_state["position"]:
-        logger.info("[PAPER] Sudah ada posisi terbuka, skip.")
-        return
+    with _STATE_LOCK:
+        if paper_state["position"]:
+            logger.info("[PAPER] Sudah ada posisi terbuka, skip.")
+            return
 
-    signal = decision.get("signal")
-    if signal not in ("LONG", "SHORT"):
-        return
+        signal = decision.get("signal")
+        if signal not in ("LONG", "SHORT"):
+            return
 
-    entry = decision.get("entry_price") or current_price
-    sl    = decision.get("stop_loss")
-    tp1   = decision.get("take_profit_1")
-    tp2   = decision.get("take_profit_2")
+        entry = decision.get("entry_price") or current_price
+        sl    = decision.get("stop_loss")
+        tp1   = decision.get("take_profit_1")
+        tp2   = decision.get("take_profit_2")
 
-    if not sl or not tp1:
-        logger.warning("[PAPER] SL/TP tidak ada, skip trade.")
-        return
+        if not sl or not tp1:
+            logger.warning("[PAPER] SL/TP tidak ada, skip trade.")
+            return
 
-    # Validasi arah SL/TP supaya logis (cegah setup terbalik dari LLM)
-    if signal == "LONG" and not (sl < entry < tp1):
-        logger.warning(f"[PAPER] LONG tidak valid (sl<{entry}<tp1) sl={sl} tp1={tp1}, skip.")
-        return
-    if signal == "SHORT" and not (tp1 < entry < sl):
-        logger.warning(f"[PAPER] SHORT tidak valid (tp1<{entry}<sl) sl={sl} tp1={tp1}, skip.")
-        return
+        # Validasi arah SL/TP supaya logis (cegah setup terbalik dari LLM)
+        if signal == "LONG" and not (sl < entry < tp1):
+            logger.warning(f"[PAPER] LONG tidak valid (sl<{entry}<tp1) sl={sl} tp1={tp1}, skip.")
+            return
+        if signal == "SHORT" and not (tp1 < entry < sl):
+            logger.warning(f"[PAPER] SHORT tidak valid (tp1<{entry}<sl) sl={sl} tp1={tp1}, skip.")
+            return
 
-    # Clamp jarak SL: tolak setup dengan SL kejauhan (risiko per-trade membengkak)
-    max_sl_pct = getattr(config, "MAX_SL_DISTANCE_PCT", 0)
-    if max_sl_pct and abs(entry - sl) / entry > max_sl_pct:
-        logger.warning(f"[PAPER] SL terlalu jauh ({abs(entry-sl)/entry*100:.2f}% > "
-                       f"{max_sl_pct*100:.2f}%), skip trade berisiko.")
-        return
+        # Clamp jarak SL: tolak setup dengan SL kejauhan (risiko per-trade membengkak)
+        max_sl_pct = getattr(config, "MAX_SL_DISTANCE_PCT", 0)
+        if max_sl_pct and abs(entry - sl) / entry > max_sl_pct:
+            logger.warning(f"[PAPER] SL terlalu jauh ({abs(entry-sl)/entry*100:.2f}% > "
+                           f"{max_sl_pct*100:.2f}%), skip trade berisiko.")
+            return
 
-    qty = round((config.TRADE_USDT * config.LEVERAGE) / entry, 4)
-    entry_fee = _fee(qty * entry)
-    paper_state["balance"]   -= entry_fee
-    paper_state["fees_paid"] += entry_fee
+        # Filter Risk:Reward minimum (entry→TP1)
+        ok_rr, rr = _rr_ok(entry, sl, tp1)
+        if not ok_rr:
+            logger.warning(f"[PAPER] R:R {rr:.2f} < MIN_RR {getattr(config,'MIN_RR',0)}, skip.")
+            return
 
-    paper_state["position"] = {
-        "side": signal, "entry": entry, "qty": qty, "qty_left": qty,
-        "sl": sl, "tp1": tp1, "tp2": tp2 or tp1, "tp1_done": False,
-        "pnl_tp1": 0.0,   # profit yang sudah dibukukan di TP1 (untuk PnL total trade)
-        "time": datetime.now(timezone.utc).isoformat(),
-        "quality": decision.get("trade_quality"),
-        "confidence": decision.get("confidence"),
-    }
-    logger.info(f"[PAPER] ✅ OPEN {signal} @ {entry} | SL={sl} | TP1={tp1} | TP2={tp2} | qty={qty} | fee={entry_fee:.4f}")
-    save_state()
+        # Slippage: entry diisi sedikit lebih buruk dari harga ideal
+        fill_entry = round(_slip(entry, signal, is_entry=True), 4)
+
+        qty = round((config.TRADE_USDT * config.LEVERAGE) / fill_entry, 4)
+        entry_fee = _fee(qty * fill_entry)
+        paper_state["balance"]   -= entry_fee
+        paper_state["fees_paid"] += entry_fee
+
+        paper_state["position"] = {
+            "side": signal, "entry": fill_entry, "qty": qty, "qty_left": qty,
+            "sl": sl, "tp1": tp1, "tp2": tp2 or tp1, "tp1_done": False,
+            "pnl_tp1": 0.0,   # profit yang sudah dibukukan di TP1 (untuk PnL total trade)
+            "rr": round(rr, 2),
+            "time": datetime.now(timezone.utc).isoformat(),
+            "quality": decision.get("trade_quality"),
+            "confidence": decision.get("confidence"),
+        }
+        logger.info(f"[PAPER] ✅ OPEN {signal} @ {fill_entry} (ideal {entry}) | SL={sl} | "
+                    f"TP1={tp1} | TP2={tp2} | qty={qty} | RR={rr:.2f} | fee={entry_fee:.4f}")
+        save_state()
 
 
 def paper_check_close(current_price: float, candle_high: float | None = None,
@@ -148,34 +194,35 @@ def paper_check_close(current_price: float, candle_high: float | None = None,
     hanya close). Returns 'SL_HIT' / 'TP1_PARTIAL' / 'TP2_HIT' / None.
     Jika SL & TP tersentuh di candle yang sama → konservatif: anggap SL dulu.
     """
-    pos = paper_state["position"]
-    if not pos:
+    with _STATE_LOCK:
+        pos = paper_state["position"]
+        if not pos:
+            return None
+
+        hi = candle_high if candle_high is not None else current_price
+        lo = candle_low  if candle_low  is not None else current_price
+        side = pos["side"]
+
+        if side == "LONG":
+            sl_hit  = lo <= pos["sl"]
+            tp2_hit = hi >= pos["tp2"]
+            tp1_hit = hi >= pos["tp1"]
+        else:  # SHORT
+            sl_hit  = hi >= pos["sl"]
+            tp2_hit = lo <= pos["tp2"]
+            tp1_hit = lo <= pos["tp1"]
+
+        # Konservatif: SL diprioritaskan jika kena di candle yang sama.
+        if sl_hit:
+            _paper_close_remaining(_slip(pos["sl"], side, is_entry=False), "SL_HIT")
+            return "SL_HIT"
+        if tp2_hit:
+            _paper_close_remaining(_slip(pos["tp2"], side, is_entry=False), "TP2_HIT")
+            return "TP2_HIT"
+        if tp1_hit and not pos["tp1_done"]:
+            _paper_partial_tp1(_slip(pos["tp1"], side, is_entry=False))
+            return "TP1_PARTIAL"
         return None
-
-    hi = candle_high if candle_high is not None else current_price
-    lo = candle_low  if candle_low  is not None else current_price
-    side = pos["side"]
-
-    if side == "LONG":
-        sl_hit  = lo <= pos["sl"]
-        tp2_hit = hi >= pos["tp2"]
-        tp1_hit = hi >= pos["tp1"]
-    else:  # SHORT
-        sl_hit  = hi >= pos["sl"]
-        tp2_hit = lo <= pos["tp2"]
-        tp1_hit = lo <= pos["tp1"]
-
-    # Konservatif: SL diprioritaskan jika kena di candle yang sama.
-    if sl_hit:
-        _paper_close_remaining(pos["sl"], "SL_HIT")
-        return "SL_HIT"
-    if tp2_hit:
-        _paper_close_remaining(pos["tp2"], "TP2_HIT")
-        return "TP2_HIT"
-    if tp1_hit and not pos["tp1_done"]:
-        _paper_partial_tp1(pos["tp1"])
-        return "TP1_PARTIAL"
-    return None
 
 
 def _realized_pnl(side, entry, exit_p, qty):
@@ -243,23 +290,27 @@ def _paper_close_remaining(price: float, reason: str):
 
 def paper_force_close(current_price: float) -> dict | None:
     """Tutup paksa posisi terbuka di harga pasar (dipakai tombol /close Telegram)."""
-    if not paper_state["position"]:
-        return None
-    return _paper_close_remaining(current_price, "MANUAL_CLOSE")
+    with _STATE_LOCK:
+        pos = paper_state["position"]
+        if not pos:
+            return None
+        return _paper_close_remaining(_slip(current_price, pos["side"], is_entry=False),
+                                      "MANUAL_CLOSE")
 
 
 def get_paper_stats() -> dict:
-    total = paper_state["wins"] + paper_state["losses"]
-    wr = paper_state["wins"] / total * 100 if total else 0
-    return {
-        "balance": round(paper_state["balance"], 2),
-        "total_pnl": round(paper_state["total_pnl"], 2),
-        "fees_paid": round(paper_state["fees_paid"], 2),
-        "total_trades": total, "wins": paper_state["wins"],
-        "losses": paper_state["losses"], "winrate": round(wr, 1),
-        "position": paper_state["position"],
-        "recent_trades": paper_state["trade_log"][-5:],
-    }
+    with _STATE_LOCK:
+        total = paper_state["wins"] + paper_state["losses"]
+        wr = paper_state["wins"] / total * 100 if total else 0
+        return {
+            "balance": round(paper_state["balance"], 2),
+            "total_pnl": round(paper_state["total_pnl"], 2),
+            "fees_paid": round(paper_state["fees_paid"], 2),
+            "total_trades": total, "wins": paper_state["wins"],
+            "losses": paper_state["losses"], "winrate": round(wr, 1),
+            "position": copy.deepcopy(paper_state["position"]),
+            "recent_trades": copy.deepcopy(paper_state["trade_log"][-5:]),
+        }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -345,6 +396,9 @@ def live_open_trade(client: Client, decision: dict, current_price: float):
     max_sl_pct = getattr(config, "MAX_SL_DISTANCE_PCT", 0)
     if max_sl_pct and abs(entry - sl) / entry > max_sl_pct:
         logger.warning(f"[LIVE] SL terlalu jauh ({abs(entry-sl)/entry*100:.2f}%), skip."); return None
+    ok_rr, rr = _rr_ok(entry, sl, tp1)
+    if not ok_rr:
+        logger.warning(f"[LIVE] R:R {rr:.2f} < MIN_RR {getattr(config,'MIN_RR',0)}, skip."); return None
 
     try:
         # Guard 2: posisi NYATA di exchange (cegah dobel/stacking)
@@ -402,7 +456,7 @@ def live_open_trade(client: Client, decision: dict, current_price: float):
         paper_state["position"] = {
             "side": signal, "entry": entry, "qty": qty, "qty_left": qty,
             "sl": sl_r, "tp1": tp1_r, "tp2": tp2_r, "tp1_done": False,
-            "pnl_tp1": 0.0,
+            "pnl_tp1": 0.0, "rr": round(rr, 2),
             "time": datetime.now(timezone.utc).isoformat(),
             "quality": decision.get("trade_quality"),
             "confidence": decision.get("confidence"),
@@ -420,11 +474,71 @@ def live_open_trade(client: Client, decision: dict, current_price: float):
         return None
 
 
+def _iso_to_ms(iso: str | None) -> int | None:
+    """Konversi ISO timestamp → epoch ms (untuk filter futures_account_trades)."""
+    if not iso:
+        return None
+    try:
+        dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return int(dt.timestamp() * 1000)
+    except Exception:
+        return None
+
+
+def _live_closing_fills(client: Client, pos: dict) -> dict | None:
+    """Ambil eksekusi penutupan NYATA dari Binance sejak posisi dibuka.
+    SUMBER KEBENARAN untuk PnL live (bukan tebakan harga level).
+    Returns {'realized_pnl','commission_usdt','exit_price','qty_closed'} atau None.
+    """
+    open_ms = _iso_to_ms(pos.get("time"))
+    try:
+        kwargs = {"symbol": config.SYMBOL}
+        if open_ms:
+            kwargs["startTime"] = open_ms - 1000   # buffer 1s utk jitter clock
+        trades = client.futures_account_trades(**kwargs)
+    except Exception as e:
+        logger.warning(f"[LIVE] Gagal ambil fill nyata (futures_account_trades): {e}")
+        return None
+
+    close_side = "SELL" if pos["side"] == "LONG" else "BUY"
+    realized = comm = qty = notional = 0.0
+    last_px = None
+    for t in trades or []:
+        if str(t.get("side", "")).upper() != close_side:
+            continue   # lewati fill ENTRY; hanya hitung eksekusi penutup
+        q  = float(t.get("qty", 0) or 0)
+        px = float(t.get("price", 0) or 0)
+        realized += float(t.get("realizedPnl", 0) or 0)
+        if str(t.get("commissionAsset", "")) == "USDT":
+            comm += float(t.get("commission", 0) or 0)
+        qty += q; notional += q * px; last_px = px
+    return {
+        "realized_pnl": realized,
+        "commission_usdt": comm,
+        "exit_price": (notional / qty) if qty else last_px,
+        "qty_closed": qty,
+    }
+
+
+def _infer_reason(pos: dict, exit_price: float | None, pnl_net: float) -> str:
+    """Tebak label penutupan dari kedekatan exit ke level (lebih akurat dari
+    menebak SL/TP2 dari flag tp1_done saja)."""
+    if exit_price is None:
+        return "TP2_HIT" if pnl_net > 0 else "SL_HIT" if pnl_net < 0 else "BREAKEVEN"
+    levels = {"TP2_HIT": pos.get("tp2"), "TP1_HIT": pos.get("tp1"),
+              "SL_HIT": pos.get("sl"), "BREAKEVEN": pos.get("entry")}
+    levels = {k: v for k, v in levels.items() if v is not None}
+    return min(levels, key=lambda k: abs(exit_price - levels[k]))
+
+
 def live_manage(client: Client, current_price: float) -> str | None:
     """
     Rekonsiliasi posisi LIVE tiap cycle (mirror paper_check_close):
       • Deteksi TP1 fill (posisi menyusut) → pindahkan SL ke breakeven.
-      • Deteksi posisi tertutup penuh di exchange (SL/TP2 kena) → catat trade.
+      • Deteksi posisi tertutup penuh di exchange (SL/TP2 kena) → catat trade
+        memakai realized PnL NYATA dari Binance (bukan tebakan harga level).
     Returns 'TP1_PARTIAL' / 'CLOSED' / None.
     """
     pos = paper_state["position"]
@@ -433,24 +547,25 @@ def live_manage(client: Client, current_price: float) -> str | None:
 
     amt = abs(live_position_amt(client, config.SYMBOL))
 
-    # 1) Posisi sudah flat di exchange → SL atau TP2 sudah eksekusi
+    # 1) Posisi sudah flat di exchange → catat dgn realized PnL nyata.
+    #    Tidak menebak SL vs TP2 lagi: realizedPnl Binance mencakup SEMUA leg
+    #    penutup (TP1 partial + leg akhir), jadi akurat walau harga bergerak
+    #    cepat entry→TP1→TP2 dalam satu cycle, atau SL kena setelah breakeven.
     if amt < (pos["qty"] * 0.05):   # toleransi pembulatan
-        reason = "TP2_HIT" if pos["tp1_done"] else "SL_HIT"
-        # estimasi harga exit dari sisi yg paling mungkin
-        exit_px = pos["tp2"] if reason == "TP2_HIT" else pos["sl"]
-        _live_record_close(exit_px, reason, client)
+        _live_record_close("AUTO", client, fallback_exit_price=current_price)
         return "CLOSED"
 
-    # 2) TP1 fill terdeteksi (posisi menyusut ~separuh) & belum ditandai
+    # 2) TP1 fill terdeteksi (posisi menyusut ~separuh) & belum ditandai.
+    #    Hanya tandai tp1_done + geser SL→BE; akuntansi PnL final diambil dari
+    #    Binance saat posisi benar-benar tertutup (hindari double-count).
     if not pos["tp1_done"] and amt <= pos["qty"] * (1 - TP1_CLOSE_FRACTION + 0.05):
-        closed_qty = pos["qty"] - amt
-        pnl = _realized_pnl(pos["side"], pos["entry"], pos["tp1"], closed_qty)
-        fee = _fee(closed_qty * pos["tp1"])
-        pos["qty_left"] = amt
-        pos["tp1_done"] = True
-        pos["pnl_tp1"]  = pos.get("pnl_tp1", 0.0) + (pnl - fee)
-        paper_state["total_pnl"] += pnl
-        paper_state["fees_paid"] += fee
+        with _STATE_LOCK:
+            closed_qty = pos["qty"] - amt
+            pos["qty_left"] = amt
+            pos["tp1_done"] = True
+            # estimasi interim (display saja) — TIDAK ditambahkan ke total_pnl
+            est = _realized_pnl(pos["side"], pos["entry"], pos["tp1"], closed_qty)
+            pos["pnl_tp1_est"] = round(est, 2)
         # Pindahkan SL ke breakeven: cancel SL lama, pasang baru di entry
         _cancel_order_silent(client, config.SYMBOL, pos.get("sl_order_id"))
         try:
@@ -467,49 +582,74 @@ def live_manage(client: Client, current_price: float) -> str | None:
         except Exception as e:
             logger.warning(f"[LIVE] Gagal pindah SL ke breakeven: {e}")
         save_state()
-        logger.info(f"[LIVE] 🟡 TP1 fill terdeteksi @ {pos['tp1']} | PnL={pnl:+.2f} | SL→BE")
+        logger.info(f"[LIVE] 🟡 TP1 fill terdeteksi @ {pos['tp1']} | est PnL leg={pos.get('pnl_tp1_est',0):+.2f} | SL→BE")
         return "TP1_PARTIAL"
 
     return None
 
 
-def _live_record_close(exit_price: float, reason: str, client: Client | None = None):
-    """Catat penutupan posisi LIVE ke ledger (mirror _paper_close_remaining) + bersihkan order sisa."""
-    pos = paper_state["position"]
-    if not pos:
-        return None
-    qty = pos["qty_left"]
-    pnl = _realized_pnl(pos["side"], pos["entry"], exit_price, qty)
-    fee = _fee(qty * exit_price)
-    paper_state["total_pnl"] += pnl
-    paper_state["balance"]   += pnl - fee   # ledger informatif (sumber kebenaran = Binance)
-    paper_state["fees_paid"] += fee
+def _live_record_close(reason: str, client: Client | None = None,
+                       fallback_exit_price: float | None = None):
+    """Catat penutupan posisi LIVE ke ledger.
+    Utamakan PnL & harga exit NYATA dari Binance (futures_account_trades);
+    fallback ke estimasi (mode lama) hanya bila API gagal. Ini menghilangkan
+    bug "tebak SL vs TP2" yang bisa salah-catat WIN sebagai LOSS / overstate PnL.
+    """
+    with _STATE_LOCK:
+        pos = paper_state["position"]
+        if not pos:
+            return None
 
-    pnl_leg_net = pnl - fee
-    pnl_total   = round(pnl_leg_net + pos.get("pnl_tp1", 0.0), 2)
-    is_win = pnl_total > 0
-    if is_win: paper_state["wins"] += 1; emoji = "✅"
-    else:      paper_state["losses"] += 1; emoji = "❌"
+        real = _live_closing_fills(client, pos) if client is not None else None
 
-    paper_state["trade_log"].append({
-        "side": pos["side"], "entry": pos["entry"], "exit": exit_price,
-        "pnl": pnl_total, "pnl_final_leg": round(pnl, 2),
-        "pnl_tp1": round(pos.get("pnl_tp1", 0.0), 2),
-        "reason": reason, "tp1_done": pos["tp1_done"],
-        "quality": pos.get("quality"), "confidence": pos.get("confidence"),
-        "opened": pos["time"], "closed": datetime.now(timezone.utc).isoformat(),
-        "live": True,
-    })
-    # Bersihkan order yang masih nyangkut di exchange
-    if client is not None:
-        try:
-            client.futures_cancel_all_open_orders(symbol=config.SYMBOL)
-        except Exception as e:
-            logger.warning(f"[LIVE] Gagal cancel sisa order: {e}")
-    paper_state["position"] = None
-    save_state()
-    logger.info(f"[LIVE] {emoji} CLOSE {reason} @ {exit_price} | trade PnL={pnl_total:+.2f}")
-    return paper_state["trade_log"][-1]
+        if real and real["qty_closed"] > 0:
+            # ── Jalur akurat: realizedPnl NYATA seluruh leg penutup ──────────
+            exit_price = round(real["exit_price"] or fallback_exit_price or pos.get("sl"), 4)
+            fee        = round(real["commission_usdt"], 4)
+            pnl_total  = round(real["realized_pnl"] - fee, 2)   # net of commission
+            pnl_leg    = pnl_total
+            if reason in (None, "AUTO"):
+                reason = _infer_reason(pos, exit_price, pnl_total)
+            src = "REAL"
+        else:
+            # ── Fallback estimasi (API gagal / paper-less) ───────────────────
+            exit_price = round((fallback_exit_price if fallback_exit_price is not None
+                                else pos.get("sl") or pos["entry"]), 4)
+            qty = pos["qty_left"]
+            pnl_leg = _realized_pnl(pos["side"], pos["entry"], exit_price, qty)
+            fee     = _fee(qty * exit_price)
+            pnl_total = round((pnl_leg - fee) + pos.get("pnl_tp1_est", 0.0), 2)
+            if reason in (None, "AUTO"):
+                reason = "TP2_HIT" if pos["tp1_done"] else "SL_HIT"
+            src = "EST"
+
+        paper_state["total_pnl"] += pnl_total
+        paper_state["balance"]   += pnl_total   # ledger informatif (kebenaran = Binance)
+        paper_state["fees_paid"] += fee
+
+        is_win = pnl_total > 0
+        if is_win: paper_state["wins"] += 1; emoji = "✅"
+        else:      paper_state["losses"] += 1; emoji = "❌"
+
+        paper_state["trade_log"].append({
+            "side": pos["side"], "entry": pos["entry"], "exit": exit_price,
+            "pnl": pnl_total, "pnl_final_leg": round(pnl_leg, 2),
+            "pnl_source": src,
+            "reason": reason, "tp1_done": pos["tp1_done"],
+            "quality": pos.get("quality"), "confidence": pos.get("confidence"),
+            "opened": pos["time"], "closed": datetime.now(timezone.utc).isoformat(),
+            "live": True,
+        })
+        # Bersihkan order yang masih nyangkut di exchange
+        if client is not None:
+            try:
+                client.futures_cancel_all_open_orders(symbol=config.SYMBOL)
+            except Exception as e:
+                logger.warning(f"[LIVE] Gagal cancel sisa order: {e}")
+        paper_state["position"] = None
+        save_state()
+        logger.info(f"[LIVE] {emoji} CLOSE {reason} @ {exit_price} | trade PnL={pnl_total:+.2f} ({src})")
+        return paper_state["trade_log"][-1]
 
 
 def live_force_close(client: Client, current_price: float) -> dict | None:
@@ -530,4 +670,5 @@ def live_force_close(client: Client, current_price: float) -> dict | None:
         client.futures_cancel_all_open_orders(symbol=config.SYMBOL)
     except Exception as e:
         logger.error(f"[LIVE] Force close gagal: {e}")
-    return _live_record_close(current_price, "MANUAL_CLOSE", client=None)
+    # Pakai client agar realized PnL nyata (termasuk leg market-close di atas) terbaca.
+    return _live_record_close("MANUAL_CLOSE", client=client, fallback_exit_price=current_price)

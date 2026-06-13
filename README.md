@@ -74,6 +74,9 @@ Semua opsi ada di **`.env.example`**. Yang penting:
 | `TRADE_USDT` / `LEVERAGE` | modal per trade & leverage | 50 / 5 |
 | `MAX_TRADES_PER_DAY` / `MAX_DAILY_LOSS_USDT` / `LOSS_COOLDOWN_TRADES` | circuit breaker harian | 10 / 50 / 3 |
 | `MAX_SL_DISTANCE_PCT` | tolak SL kejauhan (0 = off) | 0.02 |
+| `MIN_CONFIDENCE` / `MIN_QUALITY` | filter eksekusi sinyal (confidence & kualitas) | 65 / A+,A |
+| `MIN_RR` | tolak Risk:Reward (entry→TP1) di bawah ini (0 = off) | 1.2 |
+| `SLIPPAGE_BPS` | simulasi slippage/spread paper (bps, 0 = ideal) | 2 |
 | `USE_CLOSED_CANDLES` | analisa candle yang sudah close (anti-repaint) | True |
 | `AUTO_DAILY_EVAL` / `EVAL_TZ_OFFSET_HOURS` | evaluasi harian otomatis & zona waktu | True / 7 (WIB) |
 | `SCAN_INTERVAL_SEC` | jeda scan market (detik) | 60 |

@@ -85,7 +85,7 @@ def main_menu_kb():
 def build_status():
     mode = "PAPER 🧪" if getattr(config, "PAPER_TRADING", True) else "LIVE 🔴"
     state = "⏸️ JEDA" if control["paused"] else "✅ AKTIF"
-    pos = "Ada posisi terbuka" if TE.paper_state["position"] else "Tidak ada posisi"
+    pos = "Ada posisi terbuka" if TE.snapshot_state()["position"] else "Tidak ada posisi"
     return (f"📊 *STATUS BOT*\n"
             f"Kondisi : {state}\n"
             f"Mode    : {mode}\n"
@@ -97,12 +97,12 @@ def build_balance():
     s = TE.get_paper_stats()
     return (f"💰 *SALDO & PNL*\n"
             f"Saldo  : `${s.get('balance',0):,.2f}`\n"
-            f"Total PnL : `{TE.paper_state.get('total_pnl',0):+.2f} USDT`\n"
+            f"Total PnL : `{s.get('total_pnl',0):+.2f} USDT`\n"
             f"Fees   : `${s.get('fees_paid',0):,.2f}`")
 
 
 def build_position():
-    p = TE.paper_state["position"]
+    p = TE.snapshot_state()["position"]
     if not p:
         return "📈 *POSISI*\nTidak ada posisi terbuka saat ini."
     em = "🟢" if p["side"] == "LONG" else "🔴"
@@ -127,7 +127,7 @@ def build_signal():
 
 
 def build_history(n=5):
-    log = TE.paper_state.get("trade_log", [])
+    log = TE.snapshot_state().get("trade_log", [])
     if not log:
         return "📜 *RIWAYAT*\nBelum ada trade."
     lines = ["📜 *RIWAYAT TRADE (terakhir)*"]
